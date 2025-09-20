@@ -28,24 +28,26 @@ public class AuthenticationSeleniumTests {
 
     @BeforeEach
 
+   
     public void setUp() {
         WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
 
         // CI-friendly Chrome options
-        options.addArguments("--headless=new");              // Headless mode in CI
-        options.addArguments("--no-sandbox");                // Linux CI requirement
-        options.addArguments("--disable-dev-shm-usage");     // Avoid /dev/shm issues
+        options.addArguments("--headless=new");
+        options.addArguments("--no-sandbox");
+        options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--window-size=1920,1080");
-        options.addArguments("--remote-allow-origins=*");   // Fix for recent ChromeDriver versions
+        options.addArguments("--remote-allow-origins=*");
 
-        // Use a unique temp directory for each session
-        String tmpDir = System.getProperty("java.io.tmpdir") + "chrome-user-data-" + System.currentTimeMillis();
+        // Unique, valid temp directory inside /tmp
+        String tmpDir = "/tmp/chrome-user-data-" + System.currentTimeMillis();
         options.addArguments("--user-data-dir=" + tmpDir);
 
         driver = new ChromeDriver(options);
         wait = new WebDriverWait(driver, Duration.ofSeconds(WAIT_TIMEOUT));
     }
+
 
 
 
