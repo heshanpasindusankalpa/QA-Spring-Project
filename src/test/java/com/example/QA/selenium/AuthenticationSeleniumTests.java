@@ -13,6 +13,7 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+
 @SpringBootTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class AuthenticationSeleniumTests {
@@ -36,6 +37,9 @@ public class AuthenticationSeleniumTests {
         wait = new WebDriverWait(driver, Duration.ofSeconds(WAIT_TIMEOUT));
         driver.manage().window().maximize();
     }
+
+
+ 
 
     @AfterEach
     public void tearDown() {
