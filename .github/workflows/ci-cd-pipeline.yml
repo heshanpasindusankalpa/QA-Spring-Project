@@ -84,6 +84,23 @@ jobs:
           curl --retry 10 --retry-delay 5 --retry-all-errors http://localhost:8080/actuator/health
         env:
           SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
+            - name: Install Node.js
+              uses: actions/setup-node@v3
+              with:
+                node-version: 20
+
+            - name: Install frontend dependencies
+              working-directory: ./frontend  # replace with your frontend folder
+              run: npm ci
+
+            - name: Start frontend
+              working-directory: ./frontend
+              run: |
+                npm run build
+                npx serve -s build -l 3000 &
+                echo $! > frontend.pid
+                sleep 10  # wait for server to start
+
 
       - name: Install Chrome for Selenium
         run: |
@@ -99,6 +116,13 @@ jobs:
           mvn test -Dtest=AuthenticationSeleniumTests -Dselenium.headless=true
         env:
           SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
+            - name: Stop frontend server
+              run: |
+                if [ -f frontend.pid ]; then
+                  kill $(cat frontend.pid) || true
+                  rm frontend.pid
+                fi
+
 
       - name: Stop Spring Boot application
         run: |
@@ -106,23 +130,7 @@ jobs:
             kill $(cat spring-boot-app.pid) || true
             rm spring-boot-app.pid
           fi
-              - name: Install Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-
-      - name: Install frontend dependencies
-        working-directory: ./frontend  # replace with your frontend folder
-        run: npm ci
-
-      - name: Start frontend
-        working-directory: ./frontend
-        run: |
-          npm run build
-          npx serve -s build -l 3000 &
-          echo $! > frontend.pid
-          sleep 10  # wait for server to start
-
+        
 
   api-tests:
     needs: build-and-test
