@@ -53,12 +53,6 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
 
-    services:
-      mongodb:
-        image: mongo:5.0
-        ports:
-          - 27017:27017
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -79,10 +73,8 @@ jobs:
         run: |
           java -jar target/*.jar --server.port=8080 &
           echo $! > spring-boot-app.pid
-          until curl -s http://localhost:8080/actuator/health; do
-            echo "Waiting for Spring Boot..."
-            sleep 5
-          done
+          npm install -g wait-on
+          wait-on http://localhost:8080/actuator/health
         env:
           SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
 
@@ -95,16 +87,16 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
+      - name: Install wait-on
+        run: npm install -g wait-on
+
       - name: Start frontend
         working-directory: ./frontend
         run: |
           npm run build
           npx serve -s build -l 3000 --listen 0.0.0.0 &
           echo $! > frontend.pid
-          until curl -s http://localhost:3000; do
-            echo "Waiting for frontend..."
-            sleep 5
-          done
+          wait-on http://localhost:3000
 
       - name: Install Chrome for Selenium
         run: |
@@ -115,8 +107,8 @@ jobs:
 
       - name: Run Selenium tests
         run: |
-          Xvfb :99 -screen 0 1920x1080x16 &
           export DISPLAY=:99
+          Xvfb :99 -screen 0 1920x1080x16 &
           mvn test -Dtest=AuthenticationSeleniumTests -Dselenium.headless=true
         env:
           SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
@@ -139,12 +131,6 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
 
-    services:
-      mongodb:
-        image: mongo:5.0
-        ports:
-          - 27017:27017
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -165,10 +151,8 @@ jobs:
         run: |
           java -jar target/*.jar --server.port=8080 &
           echo $! > spring-boot-app.pid
-          until curl -s http://localhost:8080/actuator/health; do
-            echo "Waiting for Spring Boot..."
-            sleep 5
-          done
+          npm install -g wait-on
+          wait-on http://localhost:8080/actuator/health
         env:
           SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
 
