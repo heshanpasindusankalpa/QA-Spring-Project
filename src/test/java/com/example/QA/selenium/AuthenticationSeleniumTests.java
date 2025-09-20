@@ -28,7 +28,7 @@ public class AuthenticationSeleniumTests {
 
     @BeforeEach
 
-   
+
     public void setUp() {
         WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
