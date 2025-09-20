@@ -99,7 +99,7 @@ jobs:
           npm run build
           npx serve -s build -l 3000 &
           echo $! > frontend.pid
-          sleep 10
+          sleep 20
 
       - name: Install Chrome for Selenium
         run: |
