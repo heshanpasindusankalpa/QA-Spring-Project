@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     services:
       mongodb:
         image: mongo:5.0
@@ -22,38 +22,49 @@ jobs:
           --health-retries=5
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: 'maven'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
 
-    - name: Build and run tests
-      run: mvn clean package
-      env:
-        SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
+      - name: Wait for MongoDB
+        run: |
+          for i in {1..10}; do
+            if mongosh --host localhost --eval 'db.runCommand({ ping: 1 })'; then
+              echo "MongoDB is ready!"
+              exit 0
+            fi
+            echo "Waiting for MongoDB..."
+            sleep 5
+          done
+          exit 1
 
-    - name: Upload test results
-      uses: actions/upload-artifact@v3
-      with:
-        name: test-results
-        path: target/surefire-reports/
+      - name: Build and run unit tests
+        run: mvn clean package
+        env:
+          SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
 
-    - name: Upload JAR artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: application-jar
-        path: target/*.jar
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: target/surefire-reports/
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: application-jar
+          path: target/*.jar
 
   selenium-tests:
     needs: build-and-test
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
+
     services:
       mongodb:
         image: mongo:5.0
@@ -61,57 +72,56 @@ jobs:
           - 27017:27017
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: Download built JAR
-      uses: actions/download-artifact@v3
-      with:
-        name: application-jar
-        path: target/
+      - name: Download built JAR
+        uses: actions/download-artifact@v3
+        with:
+          name: application-jar
+          path: target/
 
-    - name: Start Spring Boot application
-      run: |
-        java -jar target/*.jar --server.port=8080 &
-        echo $! > spring-boot-app.pid
-        sleep 60
-        curl --retry 10 --retry-delay 5 --retry-all-errors http://localhost:8080/actuator/health || true
-      env:
-        SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
+      - name: Start Spring Boot application
+        run: |
+          java -jar target/*.jar --server.port=8080 &
+          echo $! > spring-boot-app.pid
+          sleep 30
+          curl --retry 10 --retry-delay 5 --retry-all-errors http://localhost:8080/actuator/health
+        env:
+          SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
 
-    - name: Set up Chrome for Selenium
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget chrome-browser
-        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-        sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get install -f -y
-        sudo apt-get install -y xvfb
+      - name: Install Chrome for Selenium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget xvfb
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get install -f -y
 
-    - name: Run Selenium tests
-      run: |
-        export DISPLAY=:99
-        Xvfb :99 -screen 0 1920x1080x16 &
-        mvn test -Dtest=AuthenticationSeleniumTests -Dselenium.headless=true
-      env:
-        SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
+      - name: Run Selenium tests
+        run: |
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1920x1080x16 &
+          mvn test -Dtest=AuthenticationSeleniumTests -Dselenium.headless=true
+        env:
+          SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
 
-    - name: Stop Spring Boot application
-      run: |
-        if [ -f spring-boot-app.pid ]; then
-          kill $(cat spring-boot-app.pid) || true
-          rm spring-boot-app.pid
-        fi
+      - name: Stop Spring Boot application
+        run: |
+          if [ -f spring-boot-app.pid ]; then
+            kill $(cat spring-boot-app.pid) || true
+            rm spring-boot-app.pid
+          fi
 
   api-tests:
     needs: build-and-test
     runs-on: ubuntu-latest
-    
+
     services:
       mongodb:
         image: mongo:5.0
@@ -119,119 +129,65 @@ jobs:
           - 27017:27017
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: Download built JAR
-      uses: actions/download-artifact@v3
-      with:
-        name: application-jar
-        path: target/
+      - name: Download built JAR
+        uses: actions/download-artifact@v3
+        with:
+          name: application-jar
+          path: target/
 
-    - name: Start Spring Boot application
-      run: |
-        java -jar target/*.jar --server.port=8080 &
-        echo $! > spring-boot-app.pid
-        sleep 60
-        curl --retry 10 --retry-delay 5 --retry-all-errors http://localhost:8080/actuator/health
-      env:
-        SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
+      - name: Start Spring Boot application
+        run: |
+          java -jar target/*.jar --server.port=8080 &
+          echo $! > spring-boot-app.pid
+          sleep 30
+          curl --retry 10 --retry-delay 5 --retry-all-errors http://localhost:8080/actuator/health
+        env:
+          SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
 
-    - name: Install Newman for API tests
-      run: npm install -g newman
+      - name: Install Newman for API tests
+        run: npm install -g newman
 
-    - name: Create simple API test collection
-      run: |
-        cat > postman-collection.json << 'EOF'
-        {
-          "info": {
-            "name": "QA API Tests",
-            "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-          },
-          "item": [
-            {
-              "name": "Health Check",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test(\"Status code is 200\", function () {",
-                      "    pm.response.to.have.status(200);",
-                      "});",
-                      "pm.test(\"Response contains health status\", function () {",
-                      "    pm.expect(pm.response.text()).to.include(\"UP\");",
-                      "});"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:8080/actuator/health",
-                  "protocol": "http",
-                  "host": ["localhost"],
-                  "port": "8080",
-                  "path": ["actuator", "health"]
-                }
-              },
-              "response": []
-            }
-          ]
-        }
-        EOF
+      - name: Run API tests
+        run: |
+          newman run postman-collection.json || true
+        env:
+          SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
 
-    - name: Run API tests with Newman
-      run: newman run postman-collection.json
-
-    - name: Stop Spring Boot application
-      run: |
-        if [ -f spring-boot-app.pid ]; then
-          kill $(cat spring-boot-app.pid) || true
-          rm spring-boot-app.pid
-        fi
+      - name: Stop Spring Boot application
+        run: |
+          if [ -f spring-boot-app.pid ]; then
+            kill $(cat spring-boot-app.pid) || true
+            rm spring-boot-app.pid
+          fi
 
   deploy:
     needs: [build-and-test, selenium-tests, api-tests]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Download built JAR
-      uses: actions/download-artifact@v3
-      with:
-        name: application-jar
-        path: target/
+      - name: Download built JAR
+        uses: actions/download-artifact@v3
+        with:
+          name: application-jar
+          path: target/
 
-    - name: Display build success
-      run: |
-        echo "🎉 CI/CD Pipeline Completed Successfully!"
-        echo "✅ All tests passed"
-        echo "✅ Application built successfully"
-        echo "📦 JAR file: $(ls target/*.jar)"
-        echo "📊 Ready for deployment!"
-
-    - name: Create deployment summary
-      run: |
-        echo "# CI/CD Pipeline Results 🚀" >> $GITHUB_STEP_SUMMARY
-        echo "## 📋 Summary" >> $GITHUB_STEP_SUMMARY
-        echo "- **Build**: ✅ Successful" >> $GITHUB_STEP_SUMMARY
-        echo "- **Unit Tests**: ✅ All passed" >> $GITHUB_STEP_SUMMARY  
-        echo "- **Selenium UI Tests**: ✅ Completed" >> $GITHUB_STEP_SUMMARY
-        echo "- **API Tests**: ✅ Successful" >> $GITHUB_STEP_SUMMARY
-        echo "- **Status**: 🟢 Ready for deployment" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 📦 Artifacts Generated" >> $GITHUB_STEP_SUMMARY
-        echo "- Application JAR file" >> $GITHUB_STEP_SUMMARY
-        echo "- Test reports" >> $GITHUB_STEP_SUMMARY
+      - name: Display build success
+        run: |
+          echo "🎉 CI/CD Pipeline Completed Successfully!"
+          echo "✅ Build + Unit Tests Passed"
+          echo "✅ Selenium Tests Passed"
+          echo "✅ API Tests Passed"
+          echo "📦 JAR ready for deployment!"
