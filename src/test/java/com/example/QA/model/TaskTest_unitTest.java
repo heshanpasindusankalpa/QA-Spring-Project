@@ -1,56 +1,47 @@
 package com.example.QA.model;
 
+import com.example.QA.model.User;
+import com.example.QA.repository.UserRepository;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-class TaskTest_unitTest {
+class AuthControllerTest_green {
 
-    private Task task;
+    @Mock
+    private UserRepository userRepository;
 
-    @BeforeEach
-    void setUp() {
-        task = new Task();
+    @InjectMocks
+    private com.example.QA.controller.AuthController authController;
+
+    public AuthControllerTest_green() {
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    void shouldCreateTaskWithValidData() {
-        // Given
-        String title = "Complete TDD tutorial";
-        String description = "Implement TDD with Spring Boot";
+    void shouldPassIfUsernameIsNew() {
+        User user = new User();
+        user.setUsername("newUser");
+        user.setPassword("password123");
+        when(userRepository.findByUsername("newUser")).thenReturn(null);
+        when(userRepository.save(user)).thenReturn(user);
 
-        // When
-        task.setTitle(title);
-        task.setDescription(description);
-        task.setCompleted(false);
-
-        // Then
-        assertEquals(title, task.getTitle());
-        assertEquals(description, task.getDescription());
-        assertFalse(task.isCompleted());
-        assertNotNull(task.getId());
+        String response = authController.register(user);
+        assertEquals("Registration successful", response);
     }
 
     @Test
-    void shouldValidateTaskTitle() {
-        // Given & When & Then
-        assertThrows(IllegalArgumentException.class, () -> {
-            task.setTitle("");
-        });
+    void shouldPassLoginWithCorrectPassword() {
+        User user = new User();
+        user.setUsername("testUser");
+        user.setPassword("correctPass");
+        when(userRepository.findByUsername("testUser")).thenReturn(user);
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            task.setTitle(null);
-        });
-    }
-
-    @Test
-    void shouldValidateTaskTitleLength() {
-        // Given
-        String longTitle = "a".repeat(101);
-
-        // When & Then
-        assertThrows(IllegalArgumentException.class, () -> {
-            task.setTitle(longTitle);
-        });
+        String response = authController.login(user);
+        assertEquals("Login successful", response);
     }
 }
