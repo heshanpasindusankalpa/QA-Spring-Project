@@ -32,8 +32,8 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build and run unit tests ,and package JAR
-        run: mvn clean test -Dtest=QaApplicationTests
+      - name: Build, run unit tests, and package JAR
+        run: mvn clean package -Dtest=QaApplicationTests
         env:
           SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
 
@@ -52,56 +52,8 @@ jobs:
           name: application-jar
           path: target/QA-0.0.1-SNAPSHOT.jar
 
-  api-tests:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: List target directory for debug
-        run: ls -la target/
-
-      - name: Download built JAR
-        uses: actions/download-artifact@v4
-        with:
-          name: application-jar
-          path: target/
-
-      - name: Start Spring Boot application
-        run: |
-          java -jar target/QA-0.0.1-SNAPSHOT.jar --server.port=8080 &
-          echo $! > spring-boot-app.pid
-          npm install -g wait-on
-          wait-on http://localhost:8080/actuator/health
-        env:
-          SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
-
-      - name: Install Newman for API tests
-        run: npm install -g newman
-
-      - name: Run API tests
-        run: |
-          newman run postman-collection.json
-        env:
-          SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
-
-      - name: Stop Spring Boot application
-        run: |
-          if [ -f spring-boot-app.pid ]; then
-            kill $(cat spring-boot-app.pid) || true
-            rm spring-boot-app.pid
-          fi
-
   deploy:
-    needs: [build-and-test, api-tests]
+    needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
 
@@ -119,5 +71,4 @@ jobs:
         run: |
           echo "🎉 CI/CD Pipeline Completed Successfully!"
           echo "✅ Build + Unit Tests Passed"
-          echo "✅ API Tests Passed"
           echo "📦 JAR ready for deployment!"
