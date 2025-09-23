@@ -1,6 +1,5 @@
 package com.example.QA.model;
 
-import com.example.QA.model.User;
 import com.example.QA.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -27,10 +26,12 @@ class AuthControllerTest_green {
         User user = new User();
         user.setUsername("newUser");
         user.setPassword("password123");
+
         when(userRepository.findByUsername("newUser")).thenReturn(null);
         when(userRepository.save(user)).thenReturn(user);
 
         String response = authController.register(user);
+
         assertEquals("Registration successful", response);
     }
 
@@ -39,9 +40,11 @@ class AuthControllerTest_green {
         User user = new User();
         user.setUsername("testUser");
         user.setPassword("correctPass");
+
         when(userRepository.findByUsername("testUser")).thenReturn(user);
 
         String response = authController.login(user);
+
         assertEquals("Login successful", response);
     }
 }
