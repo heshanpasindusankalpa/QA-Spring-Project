@@ -37,6 +37,9 @@ jobs:
         env:
           SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
 
+      - name: List target directory
+        run: ls -la target/
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
@@ -47,7 +50,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: application-jar
-          path: target/*.jar
+          path: target/QA-0.0.1-SNAPSHOT.jar
 
   api-tests:
     needs: build-and-test
@@ -71,7 +74,7 @@ jobs:
 
       - name: Start Spring Boot application
         run: |
-          java -jar target/*.jar --server.port=8080 &
+          java -jar target/QA-0.0.1-SNAPSHOT.jar --server.port=8080 &
           echo $! > spring-boot-app.pid
           npm install -g wait-on
           wait-on http://localhost:8080/actuator/health
