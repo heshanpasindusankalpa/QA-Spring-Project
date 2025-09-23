@@ -32,7 +32,7 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build and run unit tests (only passing test)
+      - name: Build and run unit tests ,and package JAR
         run: mvn clean test -Dtest=QaApplicationTests
         env:
           SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/testdb
